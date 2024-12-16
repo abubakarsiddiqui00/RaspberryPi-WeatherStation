@@ -1,162 +1,85 @@
-# Byte-compiled / optimized / DLL files
-__pycache__/
-*.py[cod]
-*$py.class
+import board
+import digitalio
+import adafruit_dht
+import time
+import matplotlib.pyplot as plt
 
-# C extensions
-*.so
+# Set up GPIO pins
+RAIN_SENSOR_PIN = board.D15 # GPIO pin for the rain sensor (water sensor) - Pin 4
+TEMP_SENSOR_PIN = board.D17  # GPIO pin for the DHT11 temperature and humidity sensor - Pin 17
 
-# Distribution / packaging
-.Python
-build/
-develop-eggs/
-dist/
-downloads/
-eggs/
-.eggs/
-lib/
-lib64/
-parts/
-sdist/
-var/
-wheels/
-share/python-wheels/
-*.egg-info/
-.installed.cfg
-*.egg
-MANIFEST
+# Set up rain sensor (digital input)
+rain_sensor = digitalio.DigitalInOut(RAIN_SENSOR_PIN)
+rain_sensor.switch_to_input(pull=digitalio.Pull.UP)  # Assuming rain sensor pulls low when it detects rain
 
-# PyInstaller
-#  Usually these files are written by a python script from a template
-#  before PyInstaller builds the exe, so as to inject date/other infos into it.
-*.manifest
-*.spec
+# Initialize DHT sensor
+dht_device = adafruit_dht.DHT11(TEMP_SENSOR_PIN)
 
-# Installer logs
-pip-log.txt
-pip-delete-this-directory.txt
+# Initialize lists for plotting
+temp_data = []
+rain_data = []
+time_data = []
 
-# Unit test / coverage reports
-htmlcov/
-.tox/
-.nox/
-.coverage
-.coverage.*
-.cache
-nosetests.xml
-coverage.xml
-*.cover
-*.py,cover
-.hypothesis/
-.pytest_cache/
-cover/
+# Set up the plot
+plt.ion()  # Enable interactive mode for live plotting
 
-# Translations
-*.mo
-*.pot
+while True:
+    # Read rain sensor data
+    rain_detected = not rain_sensor.value  # Assuming the sensor pulls low when rain is detected
+    if rain_detected:
+        rain_status = "Rain detected!"
+    else:
+        rain_status = "No rain detected"
 
-# Django stuff:
-*.log
-local_settings.py
-db.sqlite3
-db.sqlite3-journal
+    # Read temperature and humidity data from DHT sensor
+    try:
+        temperature = dht_device.temperature
+        humidity = dht_device.humidity
+    except RuntimeError as e:
+        # Handle DHT sensor read failure (may need retry)
+        print(f"Error reading from DHT sensor: {e}")
+        temperature = humidity = None
 
-# Flask stuff:
-instance/
-.webassets-cache
+    # Get current timestamp
+    current_time = time.strftime("%H:%M:%S")
 
-# Scrapy stuff:
-.scrapy
+    # Print real-time data to the console
+    if temperature is not None and humidity is not None:
+        print(f"{current_time} | Temperature: {temperature:.1f}\u00b0C | Humidity: {humidity:.1f}% | {rain_status}")
+    else:
+        print(f"{current_time} | Error: Could not read sensor data | {rain_status}")
 
-# Sphinx documentation
-docs/_build/
+    # Append data to lists for plotting
+    if temperature is not None and humidity is not None:
+        temp_data.append(temperature)
+        rain_data.append(rain_detected)
+        time_data.append(current_time)
 
-# PyBuilder
-.pybuilder/
-target/
+    # Plot data every 10 readings
+    if len(temp_data) % 10 == 0:
+        # Clear the previous plot
+        plt.clf()
 
-# Jupyter Notebook
-.ipynb_checkpoints
+        # Plot Temperature data
+        plt.subplot(2, 1, 1)
+        plt.plot(time_data, temp_data, label="Temperature", color='b')
+        plt.title("Temperature and Rain Detection")
+        plt.xlabel("Time")
+        plt.ylabel(f"Temperature (\u00b0C)")  # Using Unicode for degree symbol
+        plt.xticks(rotation=45)
+        plt.legend()
 
-# IPython
-profile_default/
-ipython_config.py
+        # Plot Rain Detection data
+        plt.subplot(2, 1, 2)
+        plt.plot(time_data, rain_data, label="Rain Detection", color='r')
+        plt.xlabel("Time")
+        plt.ylabel("Rain Detected")
+        plt.xticks(rotation=45)
+        plt.legend()
 
-# pyenv
-#   For a library or package, you might want to ignore these files since the code is
-#   intended to run in multiple environments; otherwise, check them in:
-# .python-version
+        # Display the plot
+        plt.tight_layout()
+        plt.pause(0.01)
 
-# pipenv
-#   According to pypa/pipenv#598, it is recommended to include Pipfile.lock in version control.
-#   However, in case of collaboration, if having platform-specific dependencies or dependencies
-#   having no cross-platform support, pipenv may install dependencies that don't work, or not
-#   install all needed dependencies.
-#Pipfile.lock
-
-# poetry
-#   Similar to Pipfile.lock, it is generally recommended to include poetry.lock in version control.
-#   This is especially recommended for binary packages to ensure reproducibility, and is more
-#   commonly ignored for libraries.
-#   https://python-poetry.org/docs/basic-usage/#commit-your-poetrylock-file-to-version-control
-#poetry.lock
-
-# pdm
-#   Similar to Pipfile.lock, it is generally recommended to include pdm.lock in version control.
-#pdm.lock
-#   pdm stores project-wide configurations in .pdm.toml, but it is recommended to not include it
-#   in version control.
-#   https://pdm.fming.dev/latest/usage/project/#working-with-version-control
-.pdm.toml
-.pdm-python
-.pdm-build/
-
-# PEP 582; used by e.g. github.com/David-OConnor/pyflow and github.com/pdm-project/pdm
-__pypackages__/
-
-# Celery stuff
-celerybeat-schedule
-celerybeat.pid
-
-# SageMath parsed files
-*.sage.py
-
-# Environments
-.env
-.venv
-env/
-venv/
-ENV/
-env.bak/
-venv.bak/
-
-# Spyder project settings
-.spyderproject
-.spyproject
-
-# Rope project settings
-.ropeproject
-
-# mkdocs documentation
-/site
-
-# mypy
-.mypy_cache/
-.dmypy.json
-dmypy.json
-
-# Pyre type checker
-.pyre/
-
-# pytype static type analyzer
-.pytype/
-
-# Cython debug symbols
-cython_debug/
-
-# PyCharm
-#  JetBrains specific template is maintained in a separate JetBrains.gitignore that can
-#  be found at https://github.com/github/gitignore/blob/main/Global/JetBrains.gitignore
-#  and can be added to the global gitignore or merged into this file.  For a more nuclear
-#  option (not recommended) you can uncomment the following to ignore the entire idea folder.
-#.idea/
+    # Delay between readings
+    time.sleep(2)
