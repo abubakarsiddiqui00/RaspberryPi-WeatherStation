@@ -1,5 +1,7 @@
 # RaspberryPi-WeatherStation
 
+# -- coding: utf-8 --
+
 import board
 import digitalio
 import adafruit_dht
